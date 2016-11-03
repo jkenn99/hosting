@@ -396,7 +396,7 @@ function hosting_site_validate($node, &$form) {
 
   // TODO: maybe we should allow creation of sites that conflict with HOSTING_SITE_DISABLED (which would then need to be renamed before being re-enabled)
   if (!hosting_domain_allowed($url, (array) $node)) {
-    form_set_error('title', t("The domain name you have specified is already in use."));
+    form_set_error('title', t("The domain name you have specified is already in use, or does not belang to you."));
   }
 
   // If the quota module is loaded and this is a new node, check

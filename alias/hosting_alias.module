@@ -72,7 +72,7 @@ function hosting_alias_form_site_node_form_alter(&$form, &$form_state) {
 function hosting_alias_site_form_validate($form, &$form_state) {
   $aliases = $form_state['values']['aliases'] = array_filter($form_state['values']['aliases']);
   foreach ($aliases as $key => $alias) {
-    hosting_alias_validate_alias($form_state['node'], $alias, $key);
+    hosting_alias_validate_alias($form_state['values'], $alias, $key);
   }
 }
 
@@ -365,8 +365,7 @@ function hosting_alias_node_revision_delete($node) {
 function hosting_alias_validate_alias($site, $alias, $key) {
   if ($alias = strtolower(trim($alias))) {
     $alias = strtolower(trim($alias));
-    $params = isset($site->nid) ? array('nid' => $site->nid) : array();
-    if (!hosting_domain_allowed($alias, $params) || $alias == $site->title) {
+    if (!hosting_domain_allowed($alias, (array) $site) || $alias == $site->title) {
       form_set_error("aliases][$key", t('The domain name @alias is already in use', array('@alias' => $alias)));
     }
     if (!_hosting_valid_fqdn_wildcard($alias)) {
@@ -524,6 +523,19 @@ function hosting_alias_automatic_aliases($url) {
  * generated aliases to ensure that this url has not been used before
  */
 function hosting_alias_allow_domain($url, $params = array()) {
+  $domains_to_check = array();
+
+  // Convert url to root domain.
+  $url_array = explode('.', $url);
+
+  while ($url_array) {
+    $domains_to_check[] = implode('.', $url_array);
+    array_shift($url_array);
+  }
+
+  // Get the client node from the client name.
+  $client = hosting_get_client($params['client']);
+
   $query = db_select('node', 'n')
     ->fields('n', array('nid'))
     ->condition('n.type', 'site');
@@ -532,12 +544,30 @@ function hosting_alias_allow_domain($url, $params = array()) {
   $query->condition('h.status', HOSTING_SITE_DELETED, '<>');
 
   $query->leftJoin('hosting_site_alias', 'a', 'n.vid = a.vid');
-  $query->condition('a.alias', $url);
+
+  // Check for either ...
+  $or = db_or();
+    // Exact matches ...
+    $or->condition('a.alias', $url);
+
+    // Or root domain matches of other clients
+    $and = db_and();
+      $or2 = db_or();
+        foreach ($domains_to_check as $domain) {
+          $or2->condition('a.alias', '%' . db_like($domain), 'LIKE');
+        }
+      $and->condition($or2);
+
+      $and->condition('h.client', $client->nid, '<>');
+
+    $or->condition($and);
+
+  $query->condition($or);
 
   // For existing sites, don't match the site's current aliases.
   if (isset($params['nid'])) {
     $query->condition('n.nid', $params['nid'], '<>');
   }
-  return !$query->countQuery()->execute()->fetchField();
 
+  return !$query->countQuery()->execute()->fetchField();
 }
