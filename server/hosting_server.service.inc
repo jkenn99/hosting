@@ -22,6 +22,7 @@ class hostingService {
 
   protected $has_restart_cmd = FALSE;
   protected $has_port = FALSE;
+  protected $proxyable = FALSE;
 
   function __construct($node, $values = NULL) {
     self::save($node);
@@ -45,7 +46,7 @@ class hostingService {
   }
 
   public function load() {
-    $this->mergeData("SELECT port, restart_cmd, available
+    $this->mergeData("SELECT port, restart_cmd, proxy_type, real_ip_from, available
                       FROM {hosting_service}
                       WHERE vid = :vid
                       AND type = :type",
@@ -95,6 +96,8 @@ class hostingService {
         'type' => $this->type,
         'port' => $this->port,
         'restart_cmd' => isset($this->restart_cmd) ? $this->restart_cmd : '',
+        'proxy_type' => $this->proxy_type,
+        'real_ip_from' => $this->real_ip_from,
         'available' => $this->available,
       ))
       ->execute();
@@ -139,7 +142,6 @@ class hostingService {
       );
     }
 
-
     if ($this->has_port) {
       $form['port'] = array(
         '#type' => 'textfield',
@@ -156,6 +158,42 @@ class hostingService {
       $form['port'] = array(
         '#type' => 'value',
         '#value' => '0',
+      );
+    }
+
+    if ($this->proxyable) {
+      $form['proxy_type'] = array(
+        '#type' => 'select',
+        '#title' => t('Load balancer/reverse proxy configuration'),
+        '#options' => array(
+          HOSTING_SERVER_PROXY_NONE => t('Not behind a load balancer/reverse proxy'),
+          HOSTING_SERVER_PROXY_XFORWARDEDFOR => t('Use X-Forwarded-For header'),
+          HOSTING_SERVER_PROXY_PROXYPROTOCOL => t('Use PROXY protocol'),
+        ),
+        '#required' => TRUE,
+        '#default_value' => isset($this->proxy_type) ? $this->proxy_type : HOSTING_SERVER_PROXY_NONE,
+        '#description' => t('If this server is behind a reverse proxy or load balancer, specify the type of headers your proxy server uses to pass along the client\'s IP. Warning: If you enable PROXY protocol, connections to your nginx server will only be accepted from the load balancer'),
+        '#weight' => 1,
+      );
+      $form['real_ip_from'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Load balancer/reverse proxy server IP'),
+        '#required' => !empty($this->proxy_type),
+        '#size' => 40,
+        '#default_value' => isset($this->real_ip_from) ? $this->real_ip_from : '',
+        '#description' => t('Enter an IP, CIDR range, or unix: socket to accept client real IPs from.'),
+        '#maxlength' => 255,
+        '#weight' => 2,
+      );
+    }
+    else {
+      $form['proxy_type'] = array(
+        '#type' => 'value',
+        '#value' => HOSTING_SERVER_PROXY_NONE,
+      );
+      $form['real_ip_from'] = array(
+        '#type' => 'value',
+        '#value' => '',
       );
     }
 
@@ -200,6 +238,11 @@ class hostingService {
     if ($this->has_port) {
       $task->context_options[$this->service . '_port'] = $this->port;
     }
+
+    if ($this->proxyable) {
+      $task->context_options[$this->service . '_proxy_type'] = $this->proxy_type;
+      $task->context_options[$this->service . '_real_ip_from'] = $this->real_ip_from;
+    }
   }
 
   public function context_import($context) {
@@ -211,6 +254,11 @@ class hostingService {
 
     if ($this->has_restart_cmd) {
       $this->restart_cmd = $context->{$this->service . '_restart_cmd'};
+    }
+
+    if ($this->proxyable) {
+      $this->proxy_type = $context->{$this->service . '_proxy_type'};
+      $this->real_ip_from = $context->{$this->service . '_real_ip_from'};
     }
   }
 

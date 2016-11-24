@@ -29,6 +29,21 @@ define('HOSTING_SERVER_QUEUED', 0);
 define('HOSTING_SERVER_ENABLED', 1);
 
 /**
+ * This server is not behind a proxy
+ */
+define('HOSTING_SERVER_PROXY_NONE', 0);
+
+/**
+ * This server is behind a proxy using the X-Forwarded-For header
+ */
+define('HOSTING_SERVER_PROXY_XFORWARDEDFOR', 1);
+
+/**
+ * This server is behind a proxy using the PROXY protocol
+ */
+define('HOSTING_SERVER_PROXY_PROXYPROTOCOL', 2);
+
+/**
  * Helper function to map status codes to labels and classes.
  */
 function _hosting_server_status_codes() {

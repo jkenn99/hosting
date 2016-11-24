@@ -11,6 +11,7 @@ class hostingService_http_nginx_ssl extends hostingService_http_ssl {
   public $type = 'nginx_ssl';
   public $name = 'NGINX SSL';
   protected $has_restart_cmd = TRUE;
+  protected $proxyable = TRUE;
 
   function default_restart_cmd() {
     return "sudo /etc/init.d/nginx reload";

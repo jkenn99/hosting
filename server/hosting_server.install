@@ -103,6 +103,17 @@ function hosting_server_schema() {
         'unsigned' => TRUE,
         'not null' => FALSE,
       ),
+      'proxy_type' => array(
+        'type' => 'int',
+        'size' => 'small',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'real_ip_from' => array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+      ),
       'available' => array(
         'type' => 'int',
         'size' => 'small',
@@ -380,5 +391,22 @@ function hosting_server_update_7301() {
     'size' => 'tiny',
     'not null' => TRUE,
     'default' => 0,
+  ));
+}
+
+/**
+ * Add hosting_server_proxy fields
+ */
+function hosting_server_update_7302() {
+  db_add_field('hosting_service', 'proxy_type', array(
+    'type' => 'int',
+    'size' => 'small',
+    'not null' => TRUE,
+    'default' => 0,
+  ));
+  db_add_field('hosting_service', 'real_ip_from', array(
+    'type' => 'text',
+    'size' => 'big',
+    'not null' => FALSE,
   ));
 }

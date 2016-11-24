@@ -10,6 +10,7 @@ class hostingService_http_nginx extends hostingService_http_public {
   public $type = 'nginx';
   public $name = 'NGINX';
   public $has_restart_cmd = TRUE;
+  protected $proxyable = TRUE;
 
   function default_restart_cmd() {
     return 'sudo /etc/init.d/nginx reload';

@@ -29,6 +29,12 @@ function hosting_ssl_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'ssl_proxy_type' => array(
+        'type' => 'int',
+        'size' => 'small',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
     ),
     'primary key' => array('vid', 'nid'),
   );
@@ -129,4 +135,17 @@ function hosting_ssl_uninstall() {
     ->condition('service', 'http')
     ->condition('type', 'nginx_ssl')
     ->execute();
+}
+
+
+/**
+ * Add ssl_proxy_type field
+ */
+function hosting_ssl_update_7301() {
+  db_add_field('hosting_ssl_server', 'ssl_proxy_type', array(
+    'type' => 'int',
+    'size' => 'small',
+    'not null' => TRUE,
+    'default' => 0,
+  ));
 }

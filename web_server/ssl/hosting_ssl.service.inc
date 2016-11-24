@@ -8,7 +8,7 @@ class hostingService_http_ssl extends hostingService_http_public {
 
   function load() {
     parent::load();
-    $this->mergeData("SELECT ssl_port FROM {hosting_ssl_server} WHERE vid=:vid", array(':vid' => $this->server->vid));
+    $this->mergeData("SELECT ssl_port, ssl_proxy_type FROM {hosting_ssl_server} WHERE vid=:vid", array(':vid' => $this->server->vid));
     $this->ssl_enabled = TRUE;
   }
 
@@ -19,6 +19,7 @@ class hostingService_http_ssl extends hostingService_http_public {
         'vid' => $this->server->vid,
         'nid' => $this->server->nid,
         'ssl_port' => $this->ssl_port,
+        'ssl_proxy_type' => $this->ssl_proxy_type,
       ))
       ->execute();
   }
@@ -50,6 +51,27 @@ class hostingService_http_ssl extends hostingService_http_public {
       '#maxlength' => 255,
       '#weight' => -7,
     );
+    if ($this->proxyable) {
+      $form['ssl_proxy_type'] = array(
+        '#type' => 'select',
+        '#title' => t('Load balancer/proxy configuration for SSL'),
+        '#options' => array(
+          HOSTING_SERVER_PROXY_NONE => t('Not behind a load balancer/reverse proxy'),
+          HOSTING_SERVER_PROXY_XFORWARDEDFOR => t('Use X-Forwarded-For header'),
+          HOSTING_SERVER_PROXY_PROXYPROTOCOL => t('Use PROXY protocol'),
+        ),
+        '#required' => TRUE,
+        '#default_value' => isset($this->ssl_proxy_type) ? $this->ssl_proxy_type : HOSTING_SERVER_PROXY_NONE,
+        '#description' => t('Specify the load balancer/reverse proxy configuration for your SSL server.'),
+        '#weight' => 1,
+      );
+    }
+    else {
+      $form['ssl_proxy_type'] = array(
+        '#type' => 'value',
+        '#value' => HOSTING_SERVER_PROXY_NONE,
+      );
+    }
   }
 
   function view(&$render) {
@@ -71,12 +93,20 @@ class hostingService_http_ssl extends hostingService_http_public {
   public function context_options($task_type, $ref_type, &$task) {
     parent::context_options($task_type, $ref_type, $task);
     $task->context_options[$this->service . '_ssl_port'] = $this->ssl_port;
+
+    if ($this->proxyable) {
+      $task->context_options[$this->service . '_ssl_proxy_type'] = $this->ssl_proxy_type;
+    }
   }
 
   public function context_import($context) {
     parent::context_import($context);
 
     $this->ssl_port = $context->http_ssl_port;
+
+    if ($this->proxyable) {
+      $this->ssl_proxy_type = $context->{$this->service . '_ssl_proxy_type'};
+    }
   }
 
 }
